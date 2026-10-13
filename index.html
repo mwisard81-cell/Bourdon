@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bourdon</title>
+<meta name="description" content="Boîte à rythmes et séquenceur de notes qui tourne dans le navigateur. Exporte tes boucles en WAV.">
+<meta name="theme-color" content="#ECEEE9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111413" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <h1 class="brand">
+      <span class="brand-mark" aria-hidden="true"><i class="on"></i><i></i><i></i><i class="on"></i></span>
+      Bourdon
+    </h1>
+    <span class="select-wrap">
+      <label class="sr-only" for="demo-select">Charger une démo</label>
+      <select id="demo-select" class="select">
+        <option value="">Démos</option>
+      </select>
+    </span>
+  </header>
+
+  <section class="screen" aria-label="Écran">
+    <canvas id="scope" aria-hidden="true"></canvas>
+    <div class="screen-top">
+      <input id="song-name" class="song-name" type="text" maxlength="40" aria-label="Nom du morceau" spellcheck="false" autocomplete="off">
+      <span id="key-readout" class="readout"></span>
+    </div>
+    <div class="screen-bottom">
+      <div class="leds" id="leds" aria-hidden="true"></div>
+      <span id="step-readout" class="readout">arrêt</span>
+    </div>
+  </section>
+
+  <div class="transport">
+    <button id="play" class="play" type="button" aria-pressed="false">
+      <svg class="icon-play" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5v13l11-6.5z" fill="currentColor"/></svg>
+      <svg class="icon-stop" viewBox="0 0 20 20" aria-hidden="true"><rect x="4.5" y="4.5" width="11" height="11" rx="1.5" fill="currentColor"/></svg>
+      <span class="play-label">Lecture</span>
+    </button>
+    <div class="stepper" role="group" aria-label="Tempo">
+      <button id="bpm-down" type="button" aria-label="Ralentir">−</button>
+      <label class="bpm">
+        <input id="bpm-input" type="number" inputmode="numeric" min="60" max="180" step="1" aria-label="Tempo en BPM">
+        <span>BPM</span>
+      </label>
+      <button id="bpm-up" type="button" aria-label="Accélérer">+</button>
+    </div>
+    <button id="export-open" class="btn export-btn" type="button">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9m0 0-3.5-3.5M10 12l3.5-3.5M4 14.5V16h12v-1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Exporter</span>
+    </button>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" type="button" id="tab-drums" aria-controls="panel-drums" aria-selected="true" style="--c:var(--honey)"><i class="dot"></i>Batterie</button>
+    <button role="tab" type="button" id="tab-bass" aria-controls="panel-bass" aria-selected="false" tabindex="-1" style="--c:var(--blue)"><i class="dot"></i>Basse</button>
+    <button role="tab" type="button" id="tab-lead" aria-controls="panel-lead" aria-selected="false" tabindex="-1" style="--c:var(--teal)"><i class="dot"></i>Mélodie</button>
+    <button role="tab" type="button" id="tab-mix" aria-controls="panel-mix" aria-selected="false" tabindex="-1" style="--c:var(--muted)"><i class="dot"></i>Mix</button>
+  </nav>
+
+  <!-- BATTERIE -->
+  <section id="panel-drums" class="panel" data-kind="drums" role="tabpanel" aria-labelledby="tab-drums">
+    <div class="toolbar">
+      <p class="hint">Touche ou glisse sur les cases. Touche un nom pour couper la piste.</p>
+      <div class="tool-btns">
+        <button class="btn" type="button" data-surprise="drums">Surprise</button>
+        <button class="btn ghost" type="button" data-clear="drums">Effacer</button>
+      </div>
+    </div>
+    <div class="grid-scroll"><div class="grid" id="grid-drums" data-kind="drums"></div></div>
+  </section>
+
+  <!-- BASSE -->
+  <section id="panel-bass" class="panel" data-kind="bass" role="tabpanel" aria-labelledby="tab-bass" hidden>
+    <div class="controls">
+      <div class="ctl">
+        <span class="ctl-label">Onde</span>
+        <div class="seg" data-wave-part="bass"></div>
+      </div>
+      <label class="ctl">
+        <span class="ctl-label">Brillance</span>
+        <input id="bass-cutoff" type="range" min="0" max="100" step="1" data-cutoff-part="bass">
+      </label>
+      <div class="ctl">
+        <span class="ctl-label">Octave</span>
+        <div class="mini">
+          <button type="button" data-oct-part="bass" data-d="-1" aria-label="Octave plus grave">−</button>
+          <output id="bass-oct"></output>
+          <button type="button" data-oct-part="bass" data-d="1" aria-label="Octave plus aiguë">+</button>
+        </div>
+      </div>
+      <label class="ctl">
+        <span class="ctl-label">Tonalité</span>
+        <select id="bass-key" class="key-select"></select>
+      </label>
+      <label class="ctl">
+        <span class="ctl-label">Gamme</span>
+        <select id="bass-scale" class="scale-select"></select>
+      </label>
+    </div>
+    <div class="toolbar">
+      <p class="hint">Une note par pas. Toutes les notes restent dans la gamme.</p>
+      <div class="tool-btns">
+        <button class="btn" type="button" data-mute-part="bass" aria-pressed="false">Muet</button>
+        <button class="btn" type="button" data-surprise="bass">Surprise</button>
+        <button class="btn ghost" type="button" data-clear="bass">Effacer</button>
+      </div>
+    </div>
+    <div class="grid-scroll"><div class="grid notes" id="grid-bass" data-kind="bass"></div></div>
+  </section>
+
+  <!-- MÉLODIE -->
+  <section id="panel-lead" class="panel" data-kind="lead" role="tabpanel" aria-labelledby="tab-lead" hidden>
+    <div class="controls">
+      <div class="ctl">
+        <span class="ctl-label">Onde</span>
+        <div class="seg" data-wave-part="lead"></div>
+      </div>
+      <label class="ctl">
+        <span class="ctl-label">Brillance</span>
+        <input id="lead-cutoff" type="range" min="0" max="100" step="1" data-cutoff-part="lead">
+      </label>
+      <div class="ctl">
+        <span class="ctl-label">Octave</span>
+        <div class="mini">
+          <button type="button" data-oct-part="lead" data-d="-1" aria-label="Octave plus grave">−</button>
+          <output id="lead-oct"></output>
+          <button type="button" data-oct-part="lead" data-d="1" aria-label="Octave plus aiguë">+</button>
+        </div>
+      </div>
+      <label class="ctl">
+        <span class="ctl-label">Tonalité</span>
+        <select id="lead-key" class="key-select"></select>
+      </label>
+      <label class="ctl">
+        <span class="ctl-label">Gamme</span>
+        <select id="lead-scale" class="scale-select"></select>
+      </label>
+    </div>
+    <div class="toolbar">
+      <p class="hint">Plusieurs notes sur un même pas font un accord.</p>
+      <div class="tool-btns">
+        <button class="btn" type="button" data-mute-part="lead" aria-pressed="false">Muet</button>
+        <button class="btn" type="button" data-surprise="lead">Surprise</button>
+        <button class="btn ghost" type="button" data-clear="lead">Effacer</button>
+      </div>
+    </div>
+    <div class="grid-scroll"><div class="grid notes" id="grid-lead" data-kind="lead"></div></div>
+  </section>
+
+  <!-- MIX -->
+  <section id="panel-mix" class="panel" data-kind="mix" role="tabpanel" aria-labelledby="tab-mix" hidden>
+    <div class="mix-group">
+      <h2 class="group-title">Volumes</h2>
+      <div class="faders">
+        <label class="fader"><span>Batterie</span><input id="mix-drums" type="range" min="0" max="100" data-mix="drums"><output></output></label>
+        <label class="fader"><span>Basse</span><input id="mix-bass" type="range" min="0" max="100" data-mix="bass"><output></output></label>
+        <label class="fader"><span>Mélodie</span><input id="mix-lead" type="range" min="0" max="100" data-mix="lead"><output></output></label>
+        <label class="fader"><span>Général</span><input id="mix-master" type="range" min="0" max="100" data-mix="master"><output></output></label>
+      </div>
+    </div>
+    <div class="mix-group">
+      <h2 class="group-title">Effets et groove</h2>
+      <div class="faders">
+        <label class="fader"><span>Écho</span><input id="mix-echo" type="range" min="0" max="100" data-mix="echo"><output></output></label>
+        <label class="fader"><span>Réverb</span><input id="mix-reverb" type="range" min="0" max="100" data-mix="reverb"><output></output></label>
+        <label class="fader"><span>Swing</span><input id="swing" type="range" min="0" max="100"><output id="swing-out"></output></label>
+      </div>
+      <p class="hint">L'écho et la réverb s'appliquent surtout à la mélodie. Le swing décale un pas sur deux pour un groove plus souple.</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>Ton morceau est gardé dans ce navigateur, sur cet appareil.</p>
+  </footer>
+</div>
+
+<dialog id="export-dialog" aria-labelledby="export-title">
+  <form method="dialog" class="export-form">
+    <h2 id="export-title">Exporter en WAV</h2>
+    <p class="dialog-lead">Qualité CD, stéréo. Le fichier s'importe directement dans ton logiciel de montage.</p>
+    <fieldset class="chips">
+      <legend class="ctl-label">Durée</legend>
+      <label><input type="radio" name="bars" value="1"><span><b>1 mesure</b><small data-dur="1"></small></span></label>
+      <label><input type="radio" name="bars" value="2"><span><b>2 mesures</b><small data-dur="2"></small></span></label>
+      <label><input type="radio" name="bars" value="4" checked><span><b>4 mesures</b><small data-dur="4"></small></span></label>
+      <label><input type="radio" name="bars" value="8"><span><b>8 mesures</b><small data-dur="8"></small></span></label>
+    </fieldset>
+    <label class="check"><input id="export-tail" type="checkbox" checked> Laisser finir l'écho et la réverb (1,5 s en plus)</label>
+    <p id="export-status" class="status" aria-live="polite"></p>
+    <div class="dialog-btns">
+      <button type="button" id="export-go" class="btn primary">Créer le fichier</button>
+      <a id="export-download" class="btn primary" hidden>Télécharger</a>
+      <button type="button" id="export-share" class="btn" hidden>Partager</button>
+      <button type="submit" class="btn ghost">Fermer</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden>
+  <span id="toast-text"></span>
+  <button id="toast-undo" type="button">Annuler</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
