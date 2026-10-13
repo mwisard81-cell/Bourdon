@@ -1,0 +1,11 @@
+Sons d'instruments de Bourdon (piano, piano électrique, cordes, chœur, cuivres,
+guitare nylon, harpe, basse électrique)
+
+Source : Fluid Soundfont « FluidR3_GM », par Frank Wen,
+dans la version MIDI.js Soundfonts de Benjamin Gleitzman :
+https://github.com/gleitz/midi-js-soundfonts
+
+Licence : Creative Commons Attribution 3.0
+https://creativecommons.org/licenses/by/3.0/us/
+
+Une note sur trois demi-tons a été conservée ; les fichiers ne sont pas modifiés.
