@@ -1,10 +1,9 @@
 // Service worker : l'appli fonctionne aussi hors connexion une fois ouverte.
-const CACHE = 'bourdon-v1';
+// La version publiée est un seul fichier chiffré, donc peu de choses à garder en cache.
+const CACHE = 'bourdon-v2';
 const ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
